@@ -47,6 +47,36 @@ NEXT_PUBLIC_STELLAR_NETWORK_PASSPHRASE=Test SDF Network ; September 2015
   success('Created frontend/.env.local');
 }
 
+function setupStellarAccount() {
+  try {
+    // Check if alice account already exists
+    const existingKeys = execSync('stellar keys ls', { encoding: 'utf8', stdio: 'pipe' });
+    
+    if (existingKeys.includes('alice')) {
+      info('Stellar account "alice" already exists');
+      return;
+    }
+
+    // Generate new alice account
+    execSync('stellar keys generate alice --network testnet', { stdio: 'pipe' });
+    
+    // Fund the account using friendbot
+    try {
+      const address = execSync('stellar keys address alice', { encoding: 'utf8', stdio: 'pipe' }).trim();
+      execSync(`curl -s "https://friendbot.stellar.org?addr=${address}" > /dev/null 2>&1`, { stdio: 'pipe' });
+      success('Created and funded Stellar account "alice"');
+    } catch (fundErr) {
+      success('Created Stellar account "alice" (funding may have failed, but account is ready)');
+    }
+  } catch (err) {
+    error('Failed to setup Stellar account');
+    console.error('\x1b[90mError: ' + err.message + '\x1b[0m');
+    console.log('\n💡 You can manually create the account with:');
+    console.log('   stellar keys generate alice --network testnet');
+    console.log('   curl "https://friendbot.stellar.org?addr=$(stellar keys address alice)"\n');
+  }
+}
+
 async function main() {
   console.log('\n╔════════════════════════════════════════════════════════════════╗');
   console.log('║                                                                ║');
@@ -106,6 +136,10 @@ async function main() {
   // Create .env file
   log('Setting up environment configuration...');
   createEnvFile();
+
+  // Setup Stellar account (alice)
+  log('Setting up Stellar account...');
+  setupStellarAccount();
 
   // Check for contracts
   log('Checking contracts...');
