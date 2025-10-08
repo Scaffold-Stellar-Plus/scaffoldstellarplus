@@ -54,6 +54,7 @@ export function ContractMethodCard({
   const [methodResult, setMethodResult] = useState<any>(null)
   const [methodError, setMethodError] = useState<string | null>(null)
   const [isExecuting, setIsExecuting] = useState(false)
+  const [transactionHash, setTransactionHash] = useState<string | null>(null)
 
   const updateArg = (paramName: string, value: string) => {
     setArgs(prev => ({
@@ -66,6 +67,7 @@ export function ContractMethodCard({
     setIsExecuting(true)
     setMethodError(null)
     setMethodResult(null)
+    setTransactionHash(null)
 
     try {
       const argsArray = method.parameters.map(param => {
@@ -87,6 +89,18 @@ export function ContractMethodCard({
 
       const result = await onMethodCall(method.name, argsArray, method.isReadOnly)
       setMethodResult(result)
+      
+      // Extract transaction hash if available (for write operations)
+      if (!method.isReadOnly && result) {
+        const hash = result?.hash || 
+                    result?.transactionHash || 
+                    result?.id ||
+                    result?.txHash ||
+                    (result?.result?.hash)
+        if (hash) {
+          setTransactionHash(hash)
+        }
+      }
     } catch (err) {
       setMethodError(err instanceof Error ? err.message : 'Method call failed')
     } finally {
@@ -285,20 +299,61 @@ export function ContractMethodCard({
             <div className="flex items-start gap-2">
               <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
               <div className="flex-1">
-                <p className="text-green-600 dark:text-green-400 text-sm font-medium">
-                  {method.name} executed successfully
-                </p>
-                <div className="mt-2">
-                  <pre className="text-green-600 dark:text-green-400 text-xs bg-white dark:bg-gray-800 p-2 rounded border overflow-x-auto">
-                    {JSON.stringify(methodResult, null, 2)}
-                  </pre>
-                </div>
+                {method.isReadOnly ? (
+                  <>
+                    <p className="text-green-600 dark:text-green-400 text-sm font-medium">
+                      ✓ {method.name} read successfully
+                    </p>
+                    <div className="mt-2">
+                      <pre className="text-green-600 dark:text-green-400 text-xs bg-white dark:bg-gray-800 p-2 rounded border overflow-x-auto">
+                        {JSON.stringify(methodResult, null, 2)}
+                      </pre>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-green-600 dark:text-green-400 text-sm font-medium mb-2">
+                      ✓ Transaction Signed & Submitted Successfully!
+                    </p>
+                    {transactionHash && (
+                      <div className="mb-3">
+                        <p className="text-green-700 dark:text-green-300 text-xs font-medium mb-1">
+                          Transaction Hash:
+                        </p>
+                        <div className="flex items-center gap-2 bg-white dark:bg-gray-800 p-2 rounded border border-green-300 dark:border-green-700">
+                          <code className="text-green-700 dark:text-green-300 text-xs font-mono break-all flex-1">
+                            {transactionHash}
+                          </code>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => copyToClipboard(transactionHash)}
+                            className="text-green-600 hover:text-green-700 flex-shrink-0"
+                            title="Copy transaction hash"
+                          >
+                            <Copy className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                    <details className="mt-2">
+                      <summary className="text-green-700 dark:text-green-300 text-xs cursor-pointer hover:underline">
+                        View full transaction result
+                      </summary>
+                      <div className="mt-2">
+                        <pre className="text-green-600 dark:text-green-400 text-xs bg-white dark:bg-gray-800 p-2 rounded border overflow-x-auto">
+                          {JSON.stringify(methodResult, null, 2)}
+                        </pre>
+                      </div>
+                    </details>
+                  </>
+                )}
               </div>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => copyToClipboard(JSON.stringify(methodResult, null, 2))}
-                className="text-green-600 hover:text-green-700"
+                className="text-green-600 hover:text-green-700 flex-shrink-0"
               >
                 <Copy className="h-3 w-3" />
               </Button>
