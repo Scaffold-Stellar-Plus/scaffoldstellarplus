@@ -125,11 +125,12 @@ Ensure you have the following installed:
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/your-username/scaffoldstellar.git
-   cd scaffoldstellar
+   git clone https://github.com/Scaffold-Stellar-Plus/scaffoldstellarplus.git
+   cd scaffoldstellarplus
    ```
+2. **Run yarn** (to install packages):
 
-2. **Run setup** (one command does it all):
+3. **Run setup** (one command does it all):
    ```bash
    yarn setup
    ```
@@ -140,7 +141,7 @@ Ensure you have the following installed:
    - Builds all contracts to WASM
    - Prepares the development environment
 
-3. **Deploy contracts** to testnet:
+4. **Deploy contracts** to testnet:
    ```bash
    yarn deploy:testnet
    ```
@@ -151,7 +152,7 @@ Ensure you have the following installed:
    - Creates contract import map
    - Generates metadata for dynamic UI
 
-4. **Start development server**:
+5. **Start development server**:
    ```bash
    yarn dev
    ```
