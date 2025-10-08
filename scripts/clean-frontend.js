@@ -71,10 +71,11 @@ function cleanContractImports() {
 }
 
 /**
- * Clean package build artifacts
+ * Clean all packages (entire packages directory)
+ * Since packages are auto-generated during deployment, we remove everything
  */
 function cleanPackageBuildArtifacts() {
-  console.log('\n🧹 Cleaning package build artifacts...');
+  console.log('\n🧹 Cleaning auto-generated packages...');
   
   if (!fs.existsSync(PACKAGES_DIR)) {
     console.log('   No packages directory found');
@@ -86,31 +87,23 @@ function cleanPackageBuildArtifacts() {
     return fs.statSync(itemPath).isDirectory();
   });
 
-  let distCount = 0;
-  let nodeModulesCount = 0;
+  let removedCount = 0;
 
+  // Remove all package directories since they are auto-generated
   packages.forEach(pkg => {
     const pkgPath = path.join(PACKAGES_DIR, pkg);
-    
-    // Remove dist directory
-    const distPath = path.join(pkgPath, 'dist');
-    if (safeRemove(distPath, `packages/${pkg}/dist`)) {
-      distCount++;
+    if (safeRemove(pkgPath, `packages/${pkg}`)) {
+      removedCount++;
     }
-
-    // Remove node_modules
-    const nodeModulesPath = path.join(pkgPath, 'node_modules');
-    if (safeRemove(nodeModulesPath, `packages/${pkg}/node_modules`)) {
-      nodeModulesCount++;
-    }
-
-    // Remove package-lock.json
-    const packageLockPath = path.join(pkgPath, 'package-lock.json');
-    safeRemove(packageLockPath, `packages/${pkg}/package-lock.json`);
   });
 
-  console.log(`   📊 Removed ${distCount} dist folder(s) and ${nodeModulesCount} node_modules`);
-  return distCount + nodeModulesCount;
+  if (removedCount > 0) {
+    console.log(`   📊 Removed ${removedCount} auto-generated package(s)`);
+  } else {
+    console.log('   No packages to remove');
+  }
+  
+  return removedCount;
 }
 
 /**
@@ -165,10 +158,11 @@ function cleanFrontend() {
   totalRemoved += cleanContractMetadata();
   totalRemoved += cleanNextJsArtifacts();
 
+  console.log('\n' + '═'.repeat(50));
   console.log(`✨ Cleanup complete! Removed ${totalRemoved} item(s)`);
-  console.log('\n💡 To regenerate these files, run:');
+  console.log('\n💡 To regenerate all auto-generated files, run:');
   console.log('   yarn deploy:testnet');
-  console.log('   (or yarn post-deploy if contracts are already deployed)\n');
+  console.log('   (or yarn build:packages && yarn post-deploy if already deployed)\n');
 }
 
 // Run the cleanup
