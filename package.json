@@ -1,0 +1,59 @@
+{
+  "name": "scaffoldstellar",
+  "version": "1.0.0",
+  "description": "Fullstack Stellar smart contract and frontend boilerplate",
+  "private": true,
+  "workspaces": [
+    "contracts/*",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "yarn workspace scaffoldstellar-frontend dev",
+    "build": "yarn build:contracts && yarn workspace scaffoldstellar-frontend build",
+    "build:contracts": "cd contracts && cargo build --target wasm32v1-none --release",
+    "test": "yarn test:contracts && yarn workspace scaffoldstellar-frontend test",
+    "test:contracts": "cd contracts && cargo test",
+    "deploy:localnet": "node scripts/deploy-localnet.js",
+    "deploy:testnet": "node scripts/deploy-testnet.js && yarn build:packages && yarn generate:contract-imports && yarn generate:metadata",
+    "deploy:futurenet": "node scripts/deploy-futurenet.js",
+    "deploy:auto": "node scripts/deploy-auto.js",
+    "detect:contracts": "node scripts/auto-detect-contracts.js",
+    "build:packages": "node scripts/build-contract-packages.js",
+    "generate:contract-imports": "node scripts/generate-contract-imports.js",
+    "generate:metadata": "node scripts/generate-contract-metadata.js",
+    "post-deploy": "yarn build:packages && yarn generate:contract-imports && yarn generate:metadata",
+    "test:dynamic-contracts": "node scripts/test-dynamic-contracts.js",
+    "optimize": "cd contracts && stellar contract optimize --wasm target/wasm32v1-none/release/hello_world.wasm && stellar contract optimize --wasm target/wasm32v1-none/release/increment.wasm && stellar contract optimize --wasm target/wasm32v1-none/release/token.wasm",
+    "lint": "yarn workspace scaffoldstellar-frontend lint",
+    "type-check": "yarn workspace scaffoldstellar-frontend type-check",
+    "clean": "rm -rf contracts/target && node scripts/clean-frontend.js",
+    "clean:frontend": "node scripts/clean-frontend.js",
+    "clean:all": "rm -rf contracts/target && node scripts/clean-frontend.js && rm -rf node_modules frontend/node_modules",
+    "docs:generate": "node scripts/generate-docs.js",
+    "setup": "node scripts/setup.js"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "yarn": ">=1.22.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/scaffoldstellar.git"
+  },
+  "keywords": [
+    "stellar",
+    "soroban",
+    "smart-contracts",
+    "nextjs",
+    "typescript",
+    "blockchain",
+    "defi"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
+}
