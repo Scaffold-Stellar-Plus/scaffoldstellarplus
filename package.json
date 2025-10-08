@@ -13,6 +13,8 @@
     "build:contracts": "cd contracts && cargo build --target wasm32v1-none --release",
     "test": "yarn test:contracts && yarn workspace scaffoldstellar-frontend test",
     "test:contracts": "cd contracts && cargo test",
+    "initcontract": "node scripts/init-contract.js",
+    "removecontract": "node scripts/remove-contract.js",
     "deploy:localnet": "node scripts/deploy-localnet.js",
     "deploy:testnet": "node scripts/deploy-testnet.js && yarn build:packages && yarn generate:contract-imports && yarn generate:metadata",
     "deploy:futurenet": "node scripts/deploy-futurenet.js",
