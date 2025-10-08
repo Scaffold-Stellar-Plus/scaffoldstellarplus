@@ -35,7 +35,7 @@ export function Header() {
           
           <div className="flex items-center space-x-4">
             <a
-              href="https://github.com/your-username/scaffoldstellar"
+              href="https://github.com/Scaffold-Stellar-Plus/scaffoldstellarplus.git"
               target="_blank"
               rel="noopener noreferrer"
               className="text-muted-foreground hover:text-foreground transition-colors"
@@ -43,7 +43,7 @@ export function Header() {
               GitHub
             </a>
             <a
-              href="/docs"
+              href="https://github.com/Scaffold-Stellar-Plus/scaffoldstellarplus?tab=readme-ov-file#scaffold-stellar-plus-"
               className="text-muted-foreground hover:text-foreground transition-colors"
             >
               Docs
