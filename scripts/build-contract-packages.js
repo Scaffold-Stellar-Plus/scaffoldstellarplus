@@ -124,6 +124,20 @@ async function buildContractPackages() {
     } catch (buildErr) {
       await stopSpinner()
       error(`Failed to build ${packageName}`)
+      
+      // Log detailed error information
+      if (buildErr.stderr) {
+        console.error('\x1b[90mStderr:\x1b[0m')
+        console.error('\x1b[90m' + buildErr.stderr.toString() + '\x1b[0m')
+      }
+      if (buildErr.stdout) {
+        console.error('\x1b[90mStdout:\x1b[0m')
+        console.error('\x1b[90m' + buildErr.stdout.toString() + '\x1b[0m')
+      }
+      if (buildErr.message && !buildErr.stderr && !buildErr.stdout) {
+        console.error('\x1b[90m' + buildErr.message + '\x1b[0m')
+      }
+      
       failureCount++
       failed.push(packageName)
     }

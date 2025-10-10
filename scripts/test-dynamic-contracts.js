@@ -40,6 +40,11 @@ function testDynamicContractSystem() {
       }
     } catch (err) {
       error(`Test failed: ${err.message}`)
+      
+      // Log detailed error information
+      if (err.stack) {
+        console.error('\x1b[90m' + err.stack + '\x1b[0m')
+      }
     }
   }
   

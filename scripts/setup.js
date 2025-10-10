@@ -121,6 +121,15 @@ async function main() {
     }
   } catch (err) {
     error('Failed to check/install wasm32v1-none target');
+    
+    // Log detailed error information
+    if (err.stderr) {
+      console.error('\x1b[90mStderr:\x1b[0m')
+      console.error('\x1b[90m' + err.stderr.toString() + '\x1b[0m')
+    }
+    if (err.message) {
+      console.error('\x1b[90m' + err.message + '\x1b[0m')
+    }
   }
 
   // Install dependencies
@@ -130,6 +139,16 @@ async function main() {
     success('Dependencies installed');
   } catch (err) {
     error('Failed to install dependencies');
+    
+    // Log detailed error information
+    if (err.stderr) {
+      console.error('\x1b[90mStderr:\x1b[0m')
+      console.error('\x1b[90m' + err.stderr.toString() + '\x1b[0m')
+    }
+    if (err.message) {
+      console.error('\x1b[90m' + err.message + '\x1b[0m')
+    }
+    
     process.exit(1);
   }
 

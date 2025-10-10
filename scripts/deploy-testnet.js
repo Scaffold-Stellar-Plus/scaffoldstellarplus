@@ -57,6 +57,16 @@ const checkPrerequisites = async () => {
   } catch (err) {
     await stopSpinner()
     error('Prerequisites check failed. Run "yarn setup" first.')
+    
+    // Log detailed error information
+    if (err.stderr) {
+      console.error('\x1b[90mStderr:\x1b[0m')
+      console.error('\x1b[90m' + err.stderr.toString() + '\x1b[0m')
+    }
+    if (err.message) {
+      console.error('\x1b[90m' + err.message + '\x1b[0m')
+    }
+    
     process.exit(1)
   }
 }
@@ -197,6 +207,20 @@ const deployContract = async (contractName, wasmPath) => {
   } catch (err) {
     await stopSpinner()
     error(`Failed to deploy ${contractName}`)
+    
+    // Log detailed error information
+    if (err.stderr) {
+      console.error('\x1b[90mStderr:\x1b[0m')
+      console.error('\x1b[90m' + err.stderr.toString() + '\x1b[0m')
+    }
+    if (err.stdout) {
+      console.error('\x1b[90mStdout:\x1b[0m')
+      console.error('\x1b[90m' + err.stdout.toString() + '\x1b[0m')
+    }
+    if (err.message && !err.stderr && !err.stdout) {
+      console.error('\x1b[90m' + err.message + '\x1b[0m')
+    }
+    
     return null
   }
 }
@@ -411,6 +435,20 @@ const main = async () => {
     
   } catch (err) {
     error(`Deployment failed: ${err.message}`)
+    
+    // Log detailed error information
+    if (err.stderr) {
+      console.error('\x1b[90mStderr:\x1b[0m')
+      console.error('\x1b[90m' + err.stderr.toString() + '\x1b[0m')
+    }
+    if (err.stdout) {
+      console.error('\x1b[90mStdout:\x1b[0m')
+      console.error('\x1b[90m' + err.stdout.toString() + '\x1b[0m')
+    }
+    if (err.stack && !err.stderr && !err.stdout) {
+      console.error('\x1b[90m' + err.stack + '\x1b[0m')
+    }
+    
     process.exit(1)
   }
 }

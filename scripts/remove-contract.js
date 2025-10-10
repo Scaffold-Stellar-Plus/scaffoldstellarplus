@@ -91,6 +91,12 @@ async function removeContract() {
     console.log(`✅ Removed contracts/${contractName}/`);
   } catch (error) {
     console.error(`❌ Error removing contract directory: ${error.message}`);
+    
+    // Log detailed error information
+    if (error.stack) {
+      console.error('\x1b[90m' + error.stack + '\x1b[0m');
+    }
+    
     process.exit(1);
   }
 
@@ -137,6 +143,12 @@ async function removeContract() {
     }
   } catch (error) {
     console.error(`❌ Error updating Cargo.toml: ${error.message}`);
+    
+    // Log detailed error information
+    if (error.stack) {
+      console.error('\x1b[90m' + error.stack + '\x1b[0m');
+    }
+    
     process.exit(1);
   }
 
@@ -217,5 +229,11 @@ async function removeContract() {
 // Run the removal
 removeContract().catch(error => {
   console.error(`\n❌ Unexpected error: ${error.message}`);
+  
+  // Log detailed error information
+  if (error.stack) {
+    console.error('\x1b[90m' + error.stack + '\x1b[0m');
+  }
+  
   process.exit(1);
 });

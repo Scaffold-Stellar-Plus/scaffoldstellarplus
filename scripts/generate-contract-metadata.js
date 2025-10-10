@@ -42,7 +42,14 @@ function generateContractMetadata() {
         totalContracts++
       }
     } catch (err) {
-      // Silently skip failed extractions
+      // Log error and continue with other contracts
+      error(`Failed to extract info from ${packageName}`)
+      if (err.message) {
+        console.error('\x1b[90m' + err.message + '\x1b[0m')
+      }
+      if (err.stack) {
+        console.error('\x1b[90m' + err.stack + '\x1b[0m')
+      }
     }
   }
 

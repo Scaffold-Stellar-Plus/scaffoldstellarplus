@@ -170,6 +170,12 @@ try {
   cleanFrontend();
 } catch (error) {
   console.error('❌ Error during cleanup:', error.message);
+  
+  // Log detailed error information
+  if (error.stack) {
+    console.error('\x1b[90m' + error.stack + '\x1b[0m');
+  }
+  
   process.exit(1);
 }
 

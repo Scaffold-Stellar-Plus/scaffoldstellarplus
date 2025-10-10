@@ -136,6 +136,16 @@ try {
   generateContractImports();
 } catch (error) {
   console.error('❌ Error generating contract imports:', error.message);
+  
+  // Log detailed error information
+  if (error.stderr) {
+    console.error('\x1b[90mStderr:\x1b[0m')
+    console.error('\x1b[90m' + error.stderr.toString() + '\x1b[0m')
+  }
+  if (error.stack) {
+    console.error('\x1b[90m' + error.stack + '\x1b[0m')
+  }
+  
   process.exit(1);
 }
 

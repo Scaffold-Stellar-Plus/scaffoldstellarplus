@@ -19,6 +19,16 @@ const checkPrerequisites = () => {
     execSync('stellar --version', { stdio: 'pipe' })
   } catch (err) {
     error('Stellar CLI not found. Please install it first.')
+    
+    // Log detailed error information
+    if (err.stderr) {
+      console.error('\x1b[90mStderr:\x1b[0m')
+      console.error('\x1b[90m' + err.stderr.toString() + '\x1b[0m')
+    }
+    if (err.message) {
+      console.error('\x1b[90m' + err.message + '\x1b[0m')
+    }
+    
     process.exit(1)
   }
 
@@ -26,7 +36,20 @@ const checkPrerequisites = () => {
     execSync('rustup target list | grep "wasm32v1-none (installed)"', { stdio: 'pipe' })
   } catch (err) {
     log('Adding wasm32v1-none target...')
-    execSync('rustup target add wasm32v1-none')
+    try {
+      execSync('rustup target add wasm32v1-none')
+    } catch (addErr) {
+      error('Failed to add wasm32v1-none target')
+      
+      // Log detailed error information
+      if (addErr.stderr) {
+        console.error('\x1b[90mStderr:\x1b[0m')
+        console.error('\x1b[90m' + addErr.stderr.toString() + '\x1b[0m')
+      }
+      if (addErr.message) {
+        console.error('\x1b[90m' + addErr.message + '\x1b[0m')
+      }
+    }
   }
 }
 
@@ -37,6 +60,20 @@ const buildContracts = () => {
     execSync('cd contracts && cargo build --target wasm32v1-none --release', { stdio: 'inherit' })
   } catch (err) {
     error('Failed to build contracts')
+    
+    // Log detailed error information
+    if (err.stderr) {
+      console.error('\x1b[90mStderr:\x1b[0m')
+      console.error('\x1b[90m' + err.stderr.toString() + '\x1b[0m')
+    }
+    if (err.stdout) {
+      console.error('\x1b[90mStdout:\x1b[0m')
+      console.error('\x1b[90m' + err.stdout.toString() + '\x1b[0m')
+    }
+    if (err.message && !err.stderr && !err.stdout) {
+      console.error('\x1b[90m' + err.message + '\x1b[0m')
+    }
+    
     process.exit(1)
   }
 }
@@ -100,6 +137,20 @@ const deployContract = (contractName, wasmPath) => {
     return { wasmHash, contractId }
   } catch (err) {
     error(`Failed to deploy ${contractName}: ${err.message}`)
+    
+    // Log detailed error information
+    if (err.stderr) {
+      console.error('\x1b[90mStderr:\x1b[0m')
+      console.error('\x1b[90m' + err.stderr.toString() + '\x1b[0m')
+    }
+    if (err.stdout) {
+      console.error('\x1b[90mStdout:\x1b[0m')
+      console.error('\x1b[90m' + err.stdout.toString() + '\x1b[0m')
+    }
+    if (!err.stderr && !err.stdout && err.stack) {
+      console.error('\x1b[90m' + err.stack + '\x1b[0m')
+    }
+    
     process.exit(1)
   }
 }
@@ -117,19 +168,45 @@ const generateContractBindings = (contracts) => {
     Object.entries(contracts).forEach(([contractName, contractInfo]) => {
       const outputDir = `frontend/packages/${contractName}`
       
-      // Generate TypeScript bindings
-      execSync(
-        `stellar contract bindings typescript --network localnet --contract-id ${contractInfo.contractId} --output-dir ${outputDir}`,
-        { stdio: 'inherit' }
-      )
-      
-      log(`Generated bindings for ${contractName} in ${outputDir}`)
-      
-      // Fix stellar-sdk version to 14.0.0 (CLI generates with ^13.x by default)
-      fixPackageJsonVersion(outputDir, contractName)
+      try {
+        // Generate TypeScript bindings
+        execSync(
+          `stellar contract bindings typescript --network localnet --contract-id ${contractInfo.contractId} --output-dir ${outputDir}`,
+          { stdio: 'inherit' }
+        )
+        
+        log(`Generated bindings for ${contractName} in ${outputDir}`)
+        
+        // Fix stellar-sdk version to 14.0.0 (CLI generates with ^13.x by default)
+        fixPackageJsonVersion(outputDir, contractName)
+      } catch (bindErr) {
+        error(`Failed to generate bindings for ${contractName}`)
+        
+        // Log detailed error information
+        if (bindErr.stderr) {
+          console.error('\x1b[90mStderr:\x1b[0m')
+          console.error('\x1b[90m' + bindErr.stderr.toString() + '\x1b[0m')
+        }
+        if (bindErr.stdout) {
+          console.error('\x1b[90mStdout:\x1b[0m')
+          console.error('\x1b[90m' + bindErr.stdout.toString() + '\x1b[0m')
+        }
+        if (bindErr.message && !bindErr.stderr && !bindErr.stdout) {
+          console.error('\x1b[90m' + bindErr.message + '\x1b[0m')
+        }
+      }
     })
   } catch (err) {
     error(`Failed to generate contract bindings: ${err.message}`)
+    
+    // Log detailed error information
+    if (err.stderr) {
+      console.error('\x1b[90mStderr:\x1b[0m')
+      console.error('\x1b[90m' + err.stderr.toString() + '\x1b[0m')
+    }
+    if (err.message) {
+      console.error('\x1b[90m' + err.message + '\x1b[0m')
+    }
   }
 }
 
@@ -232,6 +309,20 @@ const main = async () => {
     
   } catch (err) {
     error(`Deployment failed: ${err.message}`)
+    
+    // Log detailed error information
+    if (err.stderr) {
+      console.error('\x1b[90mStderr:\x1b[0m')
+      console.error('\x1b[90m' + err.stderr.toString() + '\x1b[0m')
+    }
+    if (err.stdout) {
+      console.error('\x1b[90mStdout:\x1b[0m')
+      console.error('\x1b[90m' + err.stdout.toString() + '\x1b[0m')
+    }
+    if (err.stack && !err.stderr && !err.stdout) {
+      console.error('\x1b[90m' + err.stack + '\x1b[0m')
+    }
+    
     process.exit(1)
   }
 }
