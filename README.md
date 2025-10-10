@@ -96,6 +96,50 @@ Built with best practices:
 
 ---
 
+## 🚀 Quick Start
+
+Choose your preferred installation method:
+
+### ⚡ NPX (Fastest - Recommended)
+
+```bash
+npx create-scaffoldstellarplus my-stellar-dapp
+cd my-stellar-dapp
+yarn setup
+yarn deploy:testnet
+yarn dev
+```
+
+### 🦀 Cargo Generate (For Rust Developers)
+
+```bash
+cargo install cargo-generate  # One-time installation
+cargo generate --git https://github.com/Scaffold-Stellar-Plus/scaffoldstellarplus
+
+# Then follow the prompts and run:
+cd your-project-name
+yarn setup
+yarn deploy:testnet
+yarn dev
+```
+
+### 📋 GitHub Template
+
+1. Click [**Use this template**](https://github.com/Scaffold-Stellar-Plus/scaffoldstellarplus/generate) on GitHub
+2. Clone your new repository
+3. Run setup:
+   ```bash
+   yarn setup
+   yarn deploy:testnet
+   yarn dev
+   ```
+
+### 📖 Manual Installation
+
+For detailed installation instructions and prerequisites, see [INSTALL.md](./INSTALL.md).
+
+---
+
 ## 🚀 Setup & Installation
 
 ### Prerequisites
@@ -121,16 +165,17 @@ Ensure you have the following installed:
 
 4. **Stellar Wallet**: Install [Freighter](https://www.freighter.app/) browser extension
 
-### Installation Steps
+### Detailed Installation Steps
+
+If you're not using the quick start methods above, follow these steps:
 
 1. **Clone the repository**:
    ```bash
    git clone https://github.com/Scaffold-Stellar-Plus/scaffoldstellarplus.git
    cd scaffoldstellarplus
    ```
-2. **Run yarn** (to install packages):
 
-3. **Run setup** (one command does it all):
+2. **Run setup** (one command does it all):
    ```bash
    yarn setup
    ```
@@ -141,7 +186,7 @@ Ensure you have the following installed:
    - Builds all contracts to WASM
    - Prepares the development environment
 
-4. **Deploy contracts** to testnet:
+3. **Deploy contracts** to testnet:
    ```bash
    yarn deploy:testnet
    ```
@@ -152,7 +197,7 @@ Ensure you have the following installed:
    - Creates contract import map
    - Generates metadata for dynamic UI
 
-5. **Start development server**:
+4. **Start development server**:
    ```bash
    yarn dev
    ```
@@ -957,6 +1002,31 @@ yarn build:packages
 - `name() -> Symbol` - Get token name (read-only)
 - `symbol() -> Symbol` - Get token symbol (read-only)
 - `decimals() -> u32` - Get decimals (read-only)
+
+---
+
+## 📤 Publishing Your Own Scaffold
+
+Want to create your own version of Scaffold Stellar Plus? We've made it easy to publish both as an npm package and a cargo template!
+
+### Publishing to NPM
+
+This allows users to run `npx your-package-name`:
+
+```bash
+cd cli
+npm install
+npm login
+npm publish
+```
+
+### Setting Up as GitHub Template
+
+1. Go to your repository **Settings**
+2. Check **"Template repository"**
+3. Users can now use `cargo generate` with your repo
+
+**For complete publishing instructions**, see [PUBLISHING.md](./PUBLISHING.md).
 
 ---
 
