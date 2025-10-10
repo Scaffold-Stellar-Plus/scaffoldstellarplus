@@ -110,19 +110,6 @@ yarn deploy:testnet
 yarn dev
 ```
 
-### 🦀 Cargo Generate (For Rust Developers)
-
-```bash
-cargo install cargo-generate  # One-time installation
-cargo generate --git https://github.com/Scaffold-Stellar-Plus/scaffoldstellarplus
-
-# Then follow the prompts and run:
-cd your-project-name
-yarn setup
-yarn deploy:testnet
-yarn dev
-```
-
 ### 📋 GitHub Template
 
 1. Click [**Use this template**](https://github.com/Scaffold-Stellar-Plus/scaffoldstellarplus/generate) on GitHub
