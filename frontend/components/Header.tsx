@@ -43,7 +43,7 @@ export function Header() {
               GitHub
             </a>
             <a
-              href="https://github.com/Scaffold-Stellar-Plus/scaffoldstellarplus?tab=readme-ov-file#scaffold-stellar-plus-"
+              href="https://scaffoldstellarplus.netlify.app/docs"
               className="text-muted-foreground hover:text-foreground transition-colors"
             >
               Docs
