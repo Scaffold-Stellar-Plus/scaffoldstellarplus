@@ -7,15 +7,19 @@
 export const contractMap: Record<string, () => Promise<any>> = {
   'hello_world': () => import('@/contracts/hello_world'),
   'increment': () => import('@/contracts/increment'),
+  'land_leasing_contract': () => import('@/contracts/land_leasing_contract'),
   'token': () => import('@/contracts/token'),
+  'water_management_contract': () => import('@/contracts/water_management_contract'),
   'Hello World': () => import('@/contracts/hello_world'),
   'Increment': () => import('@/contracts/increment'),
+  'Land Leasing Contract': () => import('@/contracts/land_leasing_contract'),
   'Token': () => import('@/contracts/token'),
+  'Water Management Contract': () => import('@/contracts/water_management_contract'),
 };
 
 /**
  * Get a list of all available contract names
  */
 export function getAvailableContracts(): string[] {
-  return ['hello_world', 'increment', 'token'];
+  return ['hello_world', 'increment', 'land_leasing_contract', 'token', 'water_management_contract'];
 }
