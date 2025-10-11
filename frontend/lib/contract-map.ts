@@ -21,5 +21,5 @@ export const contractMap: Record<string, () => Promise<any>> = {
  * Get a list of all available contract names
  */
 export function getAvailableContracts(): string[] {
-  return ['hello_world', 'increment', 'land_leasing_contract', 'token', 'water_management_contract'];
+  return ['hello_world', 'increment','token'];
 }
