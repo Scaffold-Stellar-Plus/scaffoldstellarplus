@@ -32,22 +32,59 @@ export function ContractMethodExecutor({
   const handleArgChange = (paramName: string, value: string, paramType: string) => {
     let parsedValue: any = value
 
-    // Parse based on parameter type
-    // u32 and i32 are regular numbers
-    if (paramType.includes('u32') || paramType.includes('i32')) {
-      parsedValue = value ? parseInt(value, 10) : undefined
+    try {
+      // Parse based on parameter type
+      
+      // Handle Vec<> types (arrays)
+      if (paramType.includes('Vec<') || paramType.includes('Array<')) {
+        if (!value || value.trim() === '') {
+          parsedValue = []
+        } else {
+          // Parse JSON array
+          const arrayValue = JSON.parse(value)
+          
+          // Get the inner type (e.g., "i128" from "Vec<i128>")
+          const innerTypeMatch = paramType.match(/(?:Vec|Array)<(.+)>/)
+          const innerType = innerTypeMatch ? innerTypeMatch[1].trim() : ''
+          
+          // Convert array elements based on inner type
+          if (innerType.includes('i128') || innerType.includes('u128') ||
+              innerType.includes('i64') || innerType.includes('u64') ||
+              innerType.includes('i256') || innerType.includes('u256')) {
+            // Convert to BigInt for large integers
+            parsedValue = arrayValue.map((v: any) => BigInt(v))
+          } else if (innerType.includes('i32') || innerType.includes('u32')) {
+            // Convert to regular numbers for 32-bit integers
+            parsedValue = arrayValue.map((v: any) => parseInt(v, 10))
+          } else if (innerType === 'Address' || innerType === 'string') {
+            // Keep as strings for Address and string types
+            parsedValue = arrayValue.map((v: any) => String(v))
+          } else {
+            // Default: keep array as-is
+            parsedValue = arrayValue
+          }
+        }
+      }
+      // u32 and i32 are regular numbers
+      else if (paramType.includes('u32') || paramType.includes('i32')) {
+        parsedValue = value ? parseInt(value, 10) : undefined
+      }
+      // u64, i64, u128, i128, u256, i256 are BigInt
+      else if (paramType.includes('u64') || paramType.includes('i64') || 
+               paramType.includes('u128') || paramType.includes('i128') ||
+               paramType.includes('u256') || paramType.includes('i256')) {
+        parsedValue = value ? BigInt(value) : undefined
+      } 
+      // Boolean parsing
+      else if (paramType.includes('bool')) {
+        parsedValue = value === 'true'
+      }
+      // String (default) - keep as is
+    } catch (error) {
+      // If parsing fails, keep the original string value
+      console.error(`Error parsing parameter ${paramName}:`, error)
+      parsedValue = value
     }
-    // u64, i64, u128, i128, u256, i256 are BigInt
-    else if (paramType.includes('u64') || paramType.includes('i64') || 
-             paramType.includes('u128') || paramType.includes('i128') ||
-             paramType.includes('u256') || paramType.includes('i256')) {
-      parsedValue = value ? BigInt(value) : undefined
-    } 
-    // Boolean parsing
-    else if (paramType.includes('bool')) {
-      parsedValue = value === 'true'
-    }
-    // String (default) - keep as is
 
     setArgs(prev => ({
       ...prev,
@@ -153,7 +190,11 @@ export function ContractMethodExecutor({
                       <Input
                         id={`${method.name}-${param.name}`}
                         type={param.type.includes('bool') ? 'checkbox' : 'text'}
-                        placeholder={`Enter ${param.name}`}
+                        placeholder={
+                          param.type.includes('Vec<') || param.type.includes('Array<')
+                            ? `["item1","item2"]`
+                            : `Enter ${param.name}`
+                        }
                         onChange={(e) => handleArgChange(
                           param.name,
                           param.type.includes('bool') ? String(e.target.checked) : e.target.value,
@@ -165,6 +206,11 @@ export function ContractMethodExecutor({
                     </div>
                     {param.description && (
                       <p className="text-xs text-gray-500">{param.description}</p>
+                    )}
+                    {(param.type.includes('Vec<') || param.type.includes('Array<')) && (
+                      <p className="text-xs text-blue-600 italic">
+                        💡 Enter as JSON array: {param.type.includes('i128') ? '[1000000000,2000000000]' : '["addr1","addr2"]'}
+                      </p>
                     )}
                   </div>
                 ))}
