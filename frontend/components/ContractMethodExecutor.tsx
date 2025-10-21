@@ -35,8 +35,29 @@ export function ContractMethodExecutor({
     try {
       // Parse based on parameter type
       
+      // Handle Bytes and BytesN types
+      if (paramType.includes('Bytes') || paramType.includes('bytes')) {
+        if (!value || value.trim() === '') {
+          parsedValue = new Uint8Array()
+        } else {
+          // Remove 0x prefix if present
+          const hexString = value.startsWith('0x') ? value.slice(2) : value
+          
+          // Validate hex string
+          if (!/^[0-9a-fA-F]*$/.test(hexString)) {
+            throw new Error('Invalid hex string. Use only 0-9 and a-f characters.')
+          }
+          
+          // Convert hex string to Uint8Array
+          const bytes = new Uint8Array(hexString.length / 2)
+          for (let i = 0; i < hexString.length; i += 2) {
+            bytes[i / 2] = parseInt(hexString.slice(i, i + 2), 16)
+          }
+          parsedValue = bytes
+        }
+      }
       // Handle Vec<> types (arrays)
-      if (paramType.includes('Vec<') || paramType.includes('Array<')) {
+      else if (paramType.includes('Vec<') || paramType.includes('Array<')) {
         if (!value || value.trim() === '') {
           parsedValue = []
         } else {
@@ -130,9 +151,28 @@ export function ContractMethodExecutor({
   const formatResult = (result: any): string => {
     if (result === null || result === undefined) return 'null'
     if (typeof result === 'bigint') return result.toString()
-    if (typeof result === 'object') return JSON.stringify(result, (key, value) =>
-      typeof value === 'bigint' ? value.toString() : value
-    , 2)
+    
+    // Handle Uint8Array (bytes) - convert to hex string
+    if (result instanceof Uint8Array) {
+      const hexString = Array.from(result)
+        .map(byte => byte.toString(16).padStart(2, '0'))
+        .join('')
+      return `0x${hexString}`
+    }
+    
+    if (typeof result === 'object') {
+      return JSON.stringify(result, (key, value) => {
+        if (typeof value === 'bigint') return value.toString()
+        // Handle Uint8Array in nested objects
+        if (value instanceof Uint8Array) {
+          const hexString = Array.from(value)
+            .map(byte => byte.toString(16).padStart(2, '0'))
+            .join('')
+          return `0x${hexString}`
+        }
+        return value
+      }, 2)
+    }
     return String(result)
   }
 
@@ -191,9 +231,11 @@ export function ContractMethodExecutor({
                         id={`${method.name}-${param.name}`}
                         type={param.type.includes('bool') ? 'checkbox' : 'text'}
                         placeholder={
-                          param.type.includes('Vec<') || param.type.includes('Array<')
-                            ? `["item1","item2"]`
-                            : `Enter ${param.name}`
+                          (param.type.includes('Bytes') || param.type.includes('bytes'))
+                            ? '0x1234abcd or 1234abcd'
+                            : param.type.includes('Vec<') || param.type.includes('Array<')
+                              ? `["item1","item2"]`
+                              : `Enter ${param.name}`
                         }
                         onChange={(e) => handleArgChange(
                           param.name,
@@ -206,6 +248,11 @@ export function ContractMethodExecutor({
                     </div>
                     {param.description && (
                       <p className="text-xs text-gray-500">{param.description}</p>
+                    )}
+                    {(param.type.includes('Bytes') || param.type.includes('bytes')) && (
+                      <p className="text-xs text-blue-600 italic">
+                        💡 Enter as hex string: 0x1234abcd or 1234abcd
+                      </p>
                     )}
                     {(param.type.includes('Vec<') || param.type.includes('Array<')) && (
                       <p className="text-xs text-blue-600 italic">
