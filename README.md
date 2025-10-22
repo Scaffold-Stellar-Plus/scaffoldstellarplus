@@ -424,16 +424,14 @@ Deploy only specific contracts instead of all:
 ```bash
 # Deploy only hello_world to testnet
 yarn deploy:testnet hello_world
-yarn post-deploy
 
 # Deploy only increment to mainnet
 yarn deploy:mainnet increment
-yarn post-deploy
 
 # Deploy multiple contracts individually
 yarn deploy:testnet hello_world
 yarn deploy:testnet increment
-yarn post-deploy  # Run once after all deployments
+# All post-deployment steps run automatically!
 ```
 
 **Benefits:**
