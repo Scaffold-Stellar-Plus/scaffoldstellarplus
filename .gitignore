@@ -107,9 +107,15 @@ Cargo.lock
 
 # Stellar
 .stellar/
-deployment.json
+deployment*.json
 *.wasm
 *.optimized.wasm
+.env.mainnet.local
+.env.testnet.local
+.env.futurenet.local
+
+# Keep public deployment files for network switching
+!frontend/public/deployment*.json
 
 # IDE
 .vscode/
