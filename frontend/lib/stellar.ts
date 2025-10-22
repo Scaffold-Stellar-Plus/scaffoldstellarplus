@@ -230,6 +230,11 @@ export class StellarService {
   }
 }
 
-// Singleton instance
+// Factory function to create a stellar service instance for a specific network
+export const createStellarService = (network: string = 'testnet'): StellarService => {
+  return new StellarService(network)
+}
+
+// Default singleton instance (backwards compatibility)
 export const stellarService = new StellarService(process.env.NEXT_PUBLIC_STELLAR_NETWORK || 'testnet')
 

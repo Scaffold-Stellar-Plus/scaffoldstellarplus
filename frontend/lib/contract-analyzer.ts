@@ -1,5 +1,4 @@
 import contractMetadata from './contract-metadata.json'
-import { rpcUrl } from '@/contracts/util'
 import { contractMap } from './contract-map'
 
 export interface ContractMethod {
@@ -38,19 +37,41 @@ export interface ContractAnalysis {
   contractId: string
 }
 
-// Get contract client instance for a given contract name
-export const getContractClient = async (contractName: string): Promise<any> => {
+// Get contract client instance for a given contract name with network support
+export const getContractClient = async (
+  contractName: string, 
+  network: string,
+  contractId?: string,
+  rpcUrl?: string,
+  networkPassphrase?: string
+): Promise<any> => {
   try {
+    // Build network-specific contract key
+    const contractKey = `${contractName}-${network}`
+    
     // Use auto-generated contract map (from generate-contract-imports.js)
-    const loader = contractMap[contractName] || contractMap[contractName.toLowerCase()]
+    const loader = contractMap[contractKey] || contractMap[contractKey.toLowerCase()]
     if (!loader) {
-      throw new Error(`No contract module found for: ${contractName}`)
+      throw new Error(`No contract module found for: ${contractName} on ${network}. Make sure contract is deployed to ${network}.`)
     }
 
     const module = await loader()
-    return module.default
+    const client = module.default
+    
+    // Update client options if network parameters provided
+    if (contractId) {
+      client.options.contractId = contractId
+    }
+    if (rpcUrl) {
+      client.options.rpcUrl = rpcUrl
+    }
+    if (networkPassphrase) {
+      client.options.networkPassphrase = networkPassphrase
+    }
+    
+    return client
   } catch (error) {
-    console.error(`Error loading contract ${contractName}:`, error)
+    console.error(`Error loading contract ${contractName} on ${network}:`, error)
     throw error
   }
 }
@@ -59,10 +80,14 @@ export const getContractClient = async (contractName: string): Promise<any> => {
 export const executeReadOperation = async (
   contractName: string,
   methodName: string,
-  args: Record<string, any> = {}
+  args: Record<string, any> = {},
+  network: string = 'testnet',
+  contractId?: string,
+  rpcUrl?: string,
+  networkPassphrase?: string
 ): Promise<any> => {
   try {
-    const client = await getContractClient(contractName)
+    const client = await getContractClient(contractName, network, contractId, rpcUrl, networkPassphrase)
     
     // Call the method on the client
     const result = await client[methodName](args)
@@ -74,7 +99,7 @@ export const executeReadOperation = async (
     
     return result
   } catch (error) {
-    console.error(`Error executing read operation ${methodName} on ${contractName}:`, error)
+    console.error(`Error executing read operation ${methodName} on ${contractName} (${network}):`, error)
     throw error
   }
 }
@@ -85,10 +110,14 @@ export const executeWriteOperation = async (
   methodName: string,
   args: Record<string, any> = {},
   publicKey: string,
-  signTransaction: (xdr: string, opts?: any) => Promise<any>
+  signTransaction: (xdr: string, opts?: any) => Promise<any>,
+  network: string = 'testnet',
+  contractId?: string,
+  rpcUrl?: string,
+  networkPassphrase?: string
 ): Promise<any> => {
   try {
-    const client = await getContractClient(contractName)
+    const client = await getContractClient(contractName, network, contractId, rpcUrl, networkPassphrase)
     
     // Set wallet options on the client (CosmoUI pattern)
     client.options.publicKey = publicKey
@@ -102,26 +131,28 @@ export const executeWriteOperation = async (
     
     return result
   } catch (error) {
-    console.error('Error executing write operation:', error)
+    console.error(`Error executing write operation on ${contractName} (${network}):`, error)
     throw error
   }
 }
 
-// Get all deployed contracts from metadata
-export const getAllDeployedContracts = async (): Promise<DynamicContractInfo[]> => {
+// Get all deployed contracts from metadata for a specific network
+export const getAllDeployedContracts = async (network: string = 'testnet'): Promise<DynamicContractInfo[]> => {
   const contracts: DynamicContractInfo[] = []
   
-  // Get contracts from metadata
-  const metadataContracts = Object.values(contractMetadata.contracts || {})
+  // Get contracts from metadata for the specific network
+  const networkContracts = (contractMetadata.contracts as any)?.[network] || {}
+  const metadataContracts = Object.values(networkContracts)
   
   // Add metadata contracts
   for (const contract of metadataContracts) {
-    if (contract.contractId) {
+    if ((contract as any).contractId) {
+      const c = contract as any
       contracts.push({
-        contractId: contract.contractId,
-        name: contract.name,
-        description: (contract as any).description || `Contract ${contract.contractId.slice(0, 8)}...`,
-        methods: (contract.methods || []).map((method: any) => ({
+        contractId: c.contractId,
+        name: c.name,
+        description: c.description || `Contract ${c.contractId.slice(0, 8)}...`,
+        methods: (c.methods || []).map((method: any) => ({
           name: method.name,
           parameters: method.parameters.map((param: any) => ({
             name: param.name,
@@ -133,10 +164,10 @@ export const getAllDeployedContracts = async (): Promise<DynamicContractInfo[]> 
           isReadOnly: method.isReadOnly,
           description: method.description
         })),
-        isStateful: contract.isStateful || false,
-        hasReadMethods: contract.hasReadMethods || false,
-        hasWriteMethods: contract.hasWriteMethods || false,
-        totalMethods: contract.methods?.length || 0
+        isStateful: c.isStateful || false,
+        hasReadMethods: c.hasReadMethods || false,
+        hasWriteMethods: c.hasWriteMethods || false,
+        totalMethods: c.methods?.length || 0
       })
     }
   }

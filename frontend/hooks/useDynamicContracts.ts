@@ -9,6 +9,7 @@ import {
   executeWriteOperation
 } from '@/lib/contract-analyzer'
 import { getPublicKey, signTransaction as walletSignTransaction } from '@/lib/stellar-wallets-kit'
+import { useNetwork } from '@/contexts/NetworkContext'
 
 export interface UseDynamicContractsState {
   contracts: DynamicContractInfo[]
@@ -21,6 +22,7 @@ export interface UseDynamicContractsState {
 }
 
 export function useDynamicContracts(): UseDynamicContractsState {
+  const { network, contractIds, rpcUrl, networkPassphrase } = useNetwork()
   const [contracts, setContracts] = useState<DynamicContractInfo[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -30,7 +32,7 @@ export function useDynamicContracts(): UseDynamicContractsState {
       setIsLoading(true)
       setError(null)
       
-      const deployedContracts = await getAllDeployedContracts()
+      const deployedContracts = await getAllDeployedContracts(network)
       setContracts(deployedContracts)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load contracts'
@@ -39,7 +41,7 @@ export function useDynamicContracts(): UseDynamicContractsState {
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [network])
 
   const refreshContracts = useCallback(async () => {
     await loadContracts()
@@ -79,7 +81,21 @@ export function useDynamicContracts(): UseDynamicContractsState {
   ): Promise<any> => {
     try {
       setError(null)
-      const result = await executeReadOperation(contractName, methodName, args)
+      const contractId = contractIds[contractName.toLowerCase()]
+      
+      if (!contractId) {
+        throw new Error(`Contract "${contractName}" not found on ${network}. Available contracts: ${Object.keys(contractIds).join(', ')}`)
+      }
+      
+      const result = await executeReadOperation(
+        contractName, 
+        methodName, 
+        args,
+        network,
+        contractId,
+        rpcUrl,
+        networkPassphrase
+      )
       return result
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to execute read operation'
@@ -87,7 +103,7 @@ export function useDynamicContracts(): UseDynamicContractsState {
       console.error('Error calling read method:', err)
       throw err
     }
-  }, [])
+  }, [contractIds, network, rpcUrl, networkPassphrase])
 
   // Execute a write method (requires wallet)
   const callWriteMethod = useCallback(async (
@@ -104,13 +120,19 @@ export function useDynamicContracts(): UseDynamicContractsState {
         throw new Error('Please connect your wallet first')
       }
 
+      const contractId = contractIds[contractName.toLowerCase()]
+
       // Use signTransaction directly (CosmoUI pattern)
       const result = await executeWriteOperation(
         contractName,
         methodName,
         args,
         publicKey,
-        walletSignTransaction
+        walletSignTransaction,
+        network,
+        contractId,
+        rpcUrl,
+        networkPassphrase
       )
       
       return result
@@ -120,11 +142,11 @@ export function useDynamicContracts(): UseDynamicContractsState {
       console.error('Error calling write method:', err)
       throw err
     }
-  }, [])
+  }, [contractIds, network, rpcUrl, networkPassphrase])
 
   useEffect(() => {
     loadContracts()
-  }, [loadContracts])
+  }, [loadContracts, network])
 
   return {
     contracts,
