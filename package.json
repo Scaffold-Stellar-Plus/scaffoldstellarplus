@@ -30,9 +30,9 @@
     "optimize": "cd contracts && stellar contract optimize --wasm target/wasm32v1-none/release/hello_world.wasm && stellar contract optimize --wasm target/wasm32v1-none/release/increment.wasm && stellar contract optimize --wasm target/wasm32v1-none/release/token.wasm",
     "lint": "yarn workspace scaffoldstellar-frontend lint",
     "type-check": "yarn workspace scaffoldstellar-frontend type-check",
-    "clean": "rm -rf contracts/target && node scripts/clean-frontend.js",
+    "clean": "rm -rf contracts/target deployment*.json && node scripts/clean-frontend.js",
     "clean:frontend": "node scripts/clean-frontend.js",
-    "clean:all": "rm -rf contracts/target && node scripts/clean-frontend.js && rm -rf node_modules frontend/node_modules",
+    "clean:all": "rm -rf contracts/target deployment*.json && node scripts/clean-frontend.js && rm -rf node_modules frontend/node_modules",
     "docs:generate": "node scripts/generate-docs.js",
     "setup": "node scripts/setup.js"
   },
