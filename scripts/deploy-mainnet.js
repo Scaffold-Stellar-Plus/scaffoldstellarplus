@@ -110,7 +110,7 @@ const collectPrivateKey = async () => {
   })
 }
 
-const confirmDeployment = async () => {
+const confirmDeployment = async (specificContract) => {
   return new Promise((resolve) => {
     const rl = readline.createInterface({
       input: process.stdin,
@@ -119,7 +119,11 @@ const confirmDeployment = async () => {
 
     console.log('\n\x1b[1;33m🚨 FINAL CONFIRMATION\x1b[0m')
     console.log('\x1b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\x1b[0m')
-    console.log('\x1b[33m   This action will deploy contracts to MAINNET.')
+    if (specificContract) {
+      console.log(`\x1b[33m   This action will deploy "${specificContract}" to MAINNET.`)
+    } else {
+      console.log('\x1b[33m   This action will deploy ALL contracts to MAINNET.')
+    }
     console.log('   Real XLM will be spent for deployment fees.')
     console.log('   This action cannot be undone.\x1b[0m')
     console.log('\x1b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\x1b[0m\n')
@@ -445,9 +449,15 @@ const generateDeploymentInfo = (contracts) => {
 }
 
 const main = async () => {
+  // Check for specific contract argument
+  const specificContract = process.argv[2]
+  
   console.log('\n╔════════════════════════════════════════════════════════════════╗')
   console.log('║                                                                ║')
   console.log('║              🚀 Deploying to Stellar MAINNET 🚀                ║')
+  if (specificContract) {
+    console.log(`║                   Contract: ${specificContract.padEnd(33)}║`)
+  }
   console.log('║                                                                ║')
   console.log('╚════════════════════════════════════════════════════════════════╝\n')
 
@@ -458,7 +468,7 @@ const main = async () => {
     const privateKey = await collectPrivateKey()
     
     // Confirm deployment
-    const confirmed = await confirmDeployment()
+    const confirmed = await confirmDeployment(specificContract)
     if (!confirmed) {
       process.exit(0)
     }
@@ -470,7 +480,21 @@ const main = async () => {
     await buildContracts()
     
     step('Step 3: Detecting contracts')
-    const detectedContracts = detectContracts()
+    let detectedContracts = detectContracts()
+    
+    // Filter for specific contract if provided
+    if (specificContract) {
+      const originalCount = detectedContracts.length
+      detectedContracts = detectedContracts.filter(c => c.name === specificContract)
+      
+      if (detectedContracts.length === 0) {
+        error(`Contract "${specificContract}" not found`)
+        info(`Available contracts: ${detectContracts().map(c => c.name).join(', ')}`)
+        process.exit(1)
+      }
+      
+      info(`Deploying specific contract: ${specificContract} (${detectedContracts.length} of ${originalCount})`)
+    }
     
     if (detectedContracts.length === 0) {
       error('No contracts found to deploy')
@@ -526,12 +550,16 @@ const main = async () => {
     }
     
     console.log('\n\x1b[1m📦 Next Steps:\x1b[0m')
-    console.log('   1. Build packages:  \x1b[36myarn build:packages\x1b[0m')
-    console.log('   2. Generate imports: \x1b[36myarn generate:contract-imports\x1b[0m')
-    console.log('   3. Generate metadata: \x1b[36myarn generate:metadata\x1b[0m')
-    console.log('   4. Start frontend:   \x1b[36myarn dev\x1b[0m\n')
-    
-    console.log('\x1b[90m💡 Or run all post-deployment steps: yarn post-deploy\x1b[0m\n')
+    if (specificContract) {
+      console.log('   Run post-deployment: \x1b[36myarn post-deploy\x1b[0m')
+      console.log('   Then start frontend: \x1b[36myarn dev\x1b[0m\n')
+    } else {
+      console.log('   1. Build packages:  \x1b[36myarn build:packages\x1b[0m')
+      console.log('   2. Generate imports: \x1b[36myarn generate:contract-imports\x1b[0m')
+      console.log('   3. Generate metadata: \x1b[36myarn generate:metadata\x1b[0m')
+      console.log('   4. Start frontend:   \x1b[36myarn dev\x1b[0m\n')
+      console.log('\x1b[90m💡 Or run all post-deployment steps: yarn post-deploy\x1b[0m\n')
+    }
     
     console.log('\x1b[1;33m🌐 Network Configuration:\x1b[0m')
     console.log('   Mainnet env files created:')

@@ -280,8 +280,10 @@ The frontend **automatically detects** your new contract and generates UI compon
 | Command | Description |
 |---------|-------------|
 | `yarn setup` | Complete project setup (run once) |
-| `yarn deploy:testnet` | Deploy to Stellar testnet + generate bindings |
-| `yarn deploy:mainnet` | Deploy to Stellar **mainnet** (requires private key, uses real XLM) ⚠️ |
+| `yarn deploy:testnet` | Deploy **all** contracts to Stellar testnet + generate bindings |
+| `yarn deploy:testnet <contract>` | Deploy **specific** contract to testnet (e.g., `yarn deploy:testnet hello_world`) |
+| `yarn deploy:mainnet` | Deploy **all** contracts to Stellar **mainnet** (requires private key) ⚠️ |
+| `yarn deploy:mainnet <contract>` | Deploy **specific** contract to mainnet (e.g., `yarn deploy:mainnet hello_world`) ⚠️ |
 | `yarn deploy:futurenet` | Deploy to Stellar futurenet |
 | `yarn deploy:localnet` | Deploy to local Stellar network |
 | `yarn copy:deployments` | Copy deployment files to frontend public directory |
@@ -404,16 +406,41 @@ The frontend automatically loads the correct contract addresses and RPC endpoint
 ### Complete Deployment Workflow
 
 ```bash
-# 1. Test on testnet
+# 1. Test on testnet (all contracts)
 yarn deploy:testnet
 yarn dev  # Test in browser
 
-# 2. Deploy to mainnet
+# 2. Deploy to mainnet (all contracts)
 yarn deploy:mainnet  # Interactive prompts
 
 # 3. Frontend automatically supports both networks
 yarn dev  # Switch networks in header
 ```
+
+### Selective Contract Deployment
+
+Deploy only specific contracts instead of all:
+
+```bash
+# Deploy only hello_world to testnet
+yarn deploy:testnet hello_world
+yarn post-deploy
+
+# Deploy only increment to mainnet
+yarn deploy:mainnet increment
+yarn post-deploy
+
+# Deploy multiple contracts individually
+yarn deploy:testnet hello_world
+yarn deploy:testnet increment
+yarn post-deploy  # Run once after all deployments
+```
+
+**Benefits:**
+- ⚡ Faster deployment (only builds/deploys one contract)
+- 🎯 More control over what gets deployed
+- 💰 Lower fees on mainnet (only one contract)
+- 🔄 Update specific contracts without touching others
 
 For detailed deployment documentation, see [DEPLOYMENT.md](./DEPLOYMENT.md).
 
