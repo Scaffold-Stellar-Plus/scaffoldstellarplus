@@ -11,6 +11,28 @@ const path = require('path')
 const success = (message) => console.log(`\x1b[32m✅ ${message}\x1b[0m`)
 const error = (message) => console.error(`\x1b[31m❌ ${message}\x1b[0m`)
 
+/**
+ * Parse package name to extract contract name and network
+ */
+function parsePackageName(packageName) {
+  const parts = packageName.split('-');
+  const possibleNetworks = ['testnet', 'mainnet', 'futurenet'];
+  const lastPart = parts[parts.length - 1];
+  
+  if (possibleNetworks.includes(lastPart)) {
+    return {
+      contract: parts.slice(0, -1).join('-'),
+      network: lastPart
+    };
+  }
+  
+  // Fallback for packages without network suffix (legacy support)
+  return {
+    contract: packageName,
+    network: 'unknown'
+  };
+}
+
 function generateContractMetadata() {
   const packagesDir = path.join(__dirname, '..', 'frontend', 'packages')
   const outputPath = path.join(__dirname, '..', 'frontend', 'lib', 'contract-metadata.json')
@@ -20,7 +42,11 @@ function generateContractMetadata() {
     process.exit(1)
   }
 
-  const contracts = {}
+  const contractsByNetwork = {
+    testnet: {},
+    mainnet: {},
+    futurenet: {}
+  }
   let totalContracts = 0
 
   // Scan packages directory
@@ -36,9 +62,11 @@ function generateContractMetadata() {
     }
 
     try {
-      const contractInfo = extractContractInfo(indexPath, packageName)
-      if (contractInfo) {
-        contracts[packageName] = contractInfo
+      const { contract, network } = parsePackageName(packageName)
+      const contractInfo = extractContractInfo(indexPath, packageName, contract, network)
+      
+      if (contractInfo && contractsByNetwork[network]) {
+        contractsByNetwork[network][contract] = contractInfo
         totalContracts++
       }
     } catch (err) {
@@ -53,12 +81,14 @@ function generateContractMetadata() {
     }
   }
 
-  // Generate final metadata
+  // Generate final metadata with network separation
   const metadata = {
-    contracts,
+    contracts: contractsByNetwork,
     totalContracts,
     generatedAt: new Date().toISOString(),
-    generatedBy: 'generate-contract-metadata.js'
+    generatedBy: 'generate-contract-metadata.js',
+    version: '2.0.0', // Network-aware version
+    description: 'Network-separated contract metadata'
   }
 
   // Ensure output directory exists
@@ -69,10 +99,16 @@ function generateContractMetadata() {
 
   // Write metadata file
   fs.writeFileSync(outputPath, JSON.stringify(metadata, null, 2))
-  success(`Generated metadata for ${totalContracts} contracts`)
+  
+  // Log network statistics
+  const networkStats = Object.entries(contractsByNetwork)
+    .map(([net, contracts]) => `${net}: ${Object.keys(contracts).length}`)
+    .join(', ')
+  
+  success(`Generated metadata for ${totalContracts} contracts (${networkStats})`)
 }
 
-function extractContractInfo(filePath, packageName) {
+function extractContractInfo(filePath, packageName, contractName, network) {
   const content = fs.readFileSync(filePath, 'utf-8')
   
   // Extract contract ID from networks object
@@ -84,8 +120,8 @@ function extractContractInfo(filePath, packageName) {
 
   const contractId = contractIdMatch[1]
   
-  // Try to get method info from Rust source code
-  const rustSourcePath = path.join(__dirname, '..', 'contracts', packageName, 'src', 'lib.rs')
+  // Try to get method info from Rust source code (use base contract name without network suffix)
+  const rustSourcePath = path.join(__dirname, '..', 'contracts', contractName, 'src', 'lib.rs')
   let rustMethodInfo = {}
   let rustParameterTypes = {}
   
@@ -109,7 +145,9 @@ function extractContractInfo(filePath, packageName) {
   const hasWriteMethods = methods.some(m => !m.isReadOnly)
 
   return {
-    name: packageName,
+    name: contractName,
+    packageName: packageName,
+    network: network,
     contractId,
     path: `packages/${packageName}`,
     methods,
