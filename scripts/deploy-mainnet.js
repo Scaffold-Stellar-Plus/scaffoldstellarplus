@@ -3,6 +3,7 @@
 const { execSync, spawn } = require('child_process')
 const fs = require('fs')
 const path = require('path')
+const readline = require('readline')
 
 // Clean logging with emojis and colors
 const log = (message) => console.log(`\x1b[36m${message}\x1b[0m`)
@@ -10,6 +11,7 @@ const success = (message) => console.log(`\x1b[32m✅ ${message}\x1b[0m`)
 const error = (message) => console.error(`\x1b[31m❌ ${message}\x1b[0m`)
 const info = (message) => console.log(`\x1b[33m📋 ${message}\x1b[0m`)
 const step = (message) => console.log(`\n\x1b[1;36m▶ ${message}\x1b[0m`)
+const warning = (message) => console.log(`\x1b[33m⚠️  ${message}\x1b[0m`)
 
 // Progress spinner with minimum display time
 let spinnerInterval
@@ -45,18 +47,111 @@ const stopSpinner = async (successText) => {
   if (successText) success(successText)
 }
 
+// Interactive private key collection
+const collectPrivateKey = async () => {
+  return new Promise((resolve, reject) => {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout
+    })
+
+    console.log('\n\x1b[1;33m🔐 MAINNET DEPLOYMENT - PRIVATE KEY REQUIRED\x1b[0m')
+    console.log('\x1b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\x1b[0m')
+    console.log('\x1b[33m⚠️  WARNING: You are deploying to Stellar MAINNET!\x1b[0m')
+    console.log('\x1b[33m⚠️  This will use real XLM from your account.\x1b[0m')
+    console.log('\x1b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\x1b[0m\n')
+
+    // Mask the private key input
+    const stdin = process.stdin
+    stdin.setRawMode(true)
+    stdin.resume()
+    stdin.setEncoding('utf8')
+
+    let privateKey = ''
+    process.stdout.write('\x1b[1mEnter your private key:\x1b[0m ')
+
+    const onData = (char) => {
+      // Handle different characters
+      if (char === '\n' || char === '\r' || char === '\u0004') {
+        // Enter or Ctrl+D
+        stdin.setRawMode(false)
+        stdin.pause()
+        stdin.removeListener('data', onData)
+        process.stdout.write('\n')
+        rl.close()
+
+        if (privateKey.trim().length === 0) {
+          error('Private key cannot be empty')
+          reject(new Error('Private key is required'))
+        } else {
+          resolve(privateKey.trim())
+        }
+      } else if (char === '\u0003') {
+        // Ctrl+C
+        stdin.setRawMode(false)
+        stdin.pause()
+        process.stdout.write('\n')
+        error('Deployment cancelled')
+        process.exit(1)
+      } else if (char === '\u007f' || char === '\b') {
+        // Backspace
+        if (privateKey.length > 0) {
+          privateKey = privateKey.slice(0, -1)
+          process.stdout.write('\b \b')
+        }
+      } else {
+        // Regular character
+        privateKey += char
+        process.stdout.write('*')
+      }
+    }
+
+    stdin.on('data', onData)
+  })
+}
+
+const confirmDeployment = async (specificContract) => {
+  return new Promise((resolve) => {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout
+    })
+
+    console.log('\n\x1b[1;33m🚨 FINAL CONFIRMATION\x1b[0m')
+    console.log('\x1b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\x1b[0m')
+    if (specificContract) {
+      console.log(`\x1b[33m   This action will deploy "${specificContract}" to MAINNET.`)
+    } else {
+      console.log('\x1b[33m   This action will deploy ALL contracts to MAINNET.')
+    }
+    console.log('   Real XLM will be spent for deployment fees.')
+    console.log('   This action cannot be undone.\x1b[0m')
+    console.log('\x1b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\x1b[0m\n')
+
+    rl.question('\x1b[1mType "DEPLOY TO MAINNET" to confirm:\x1b[0m ', (answer) => {
+      rl.close()
+      if (answer.trim() === 'DEPLOY TO MAINNET') {
+        success('Deployment confirmed')
+        resolve(true)
+      } else {
+        error('Deployment cancelled - confirmation text did not match')
+        resolve(false)
+      }
+    })
+  })
+}
+
 const checkPrerequisites = async () => {
   startSpinner('Checking prerequisites...')
   
   try {
     execSync('stellar --version', { stdio: 'pipe' })
     execSync('rustup target list | grep "wasm32v1-none (installed)"', { stdio: 'pipe' })
-    execSync('curl -s --connect-timeout 5 https://soroban-testnet.stellar.org:443 > /dev/null', { stdio: 'pipe' })
-    execSync('stellar keys ls | grep alice', { stdio: 'pipe' })
+    execSync('curl -s --connect-timeout 5 https://mainnet.sorobanrpc.com > /dev/null', { stdio: 'pipe' })
     await stopSpinner('Prerequisites verified')
   } catch (err) {
     await stopSpinner()
-    error('Prerequisites check failed. Run "yarn setup" first.')
+    error('Prerequisites check failed.')
     
     // Log detailed error information
     if (err.stderr) {
@@ -164,8 +259,8 @@ const detectContracts = () => {
   return contracts
 }
 
-const deployContract = async (contractName, wasmPath) => {
-  startSpinner(`Deploying ${contractName}...`)
+const deployContract = async (contractName, wasmPath, privateKey) => {
+  startSpinner(`Deploying ${contractName} to MAINNET...`)
   
   try {
     // Check if WASM file exists
@@ -175,11 +270,10 @@ const deployContract = async (contractName, wasmPath) => {
       return null
     }
     
-    // Upload contract
-    const uploadOutput = execSync(
-      `stellar contract upload --network testnet --source alice --wasm ${wasmPath}`,
-      { encoding: 'utf8', stdio: 'pipe' }
-    )
+    // Upload contract with mainnet parameters
+    const uploadCmd = `stellar contract upload --network mainnet --source ${privateKey} --wasm ${wasmPath} --rpc-url https://mainnet.sorobanrpc.com --network-passphrase "Public Global Stellar Network ; September 2015"`
+    
+    const uploadOutput = execSync(uploadCmd, { encoding: 'utf8', stdio: 'pipe' })
     
     const wasmHash = uploadOutput.trim()
     if (!wasmHash || wasmHash.length === 0) {
@@ -188,11 +282,10 @@ const deployContract = async (contractName, wasmPath) => {
       return null
     }
     
-    // Deploy contract
-    const deployOutput = execSync(
-      `stellar contract deploy --wasm-hash ${wasmHash} --source alice --network testnet --alias ${contractName}`,
-      { encoding: 'utf8', stdio: 'pipe' }
-    )
+    // Deploy contract with mainnet parameters
+    const deployCmd = `stellar contract deploy --wasm-hash ${wasmHash} --source ${privateKey} --rpc-url https://mainnet.sorobanrpc.com --network-passphrase "Public Global Stellar Network ; September 2015" --alias ${contractName}`
+    
+    const deployOutput = execSync(deployCmd, { encoding: 'utf8', stdio: 'pipe' })
     
     const contractId = deployOutput.trim()
     if (!contractId || contractId.length === 0) {
@@ -256,12 +349,12 @@ const generateContractBindings = async (contracts) => {
       // Generate bindings for each contract sequentially with network-specific directories
       for (const [contractName, contractInfo] of Object.entries(contracts)) {
         currentContract++
-        const outputDir = `frontend/packages/${contractName}-testnet`
+        const outputDir = `frontend/packages/${contractName}-mainnet`
         
         try {
           // Try without overwrite first
           execSync(
-            `stellar contract bindings typescript --network testnet --contract-id ${contractInfo.contractId} --output-dir ${outputDir}`,
+            `stellar contract bindings typescript --network mainnet --contract-id ${contractInfo.contractId} --output-dir ${outputDir} --rpc-url https://mainnet.sorobanrpc.com --network-passphrase "Public Global Stellar Network ; September 2015"`,
             { stdio: 'pipe' }
           )
         } catch (bindingsErr) {
@@ -269,7 +362,7 @@ const generateContractBindings = async (contracts) => {
           const errorMessage = bindingsErr.message || bindingsErr.stdout || bindingsErr.stderr || ''
           if (errorMessage.includes('already exists')) {
             execSync(
-              `stellar contract bindings typescript --network testnet --contract-id ${contractInfo.contractId} --output-dir ${outputDir} --overwrite`,
+              `stellar contract bindings typescript --network mainnet --contract-id ${contractInfo.contractId} --output-dir ${outputDir} --rpc-url https://mainnet.sorobanrpc.com --network-passphrase "Public Global Stellar Network ; September 2015" --overwrite`,
               { stdio: 'pipe' }
             )
           } else {
@@ -278,7 +371,7 @@ const generateContractBindings = async (contracts) => {
         }
         
         // Fix stellar-sdk version to 14.0.0 (CLI generates with ^13.x by default)
-        fixPackageJsonVersion(outputDir, contractName, 'testnet')
+        fixPackageJsonVersion(outputDir, contractName, 'mainnet')
       }
       
       clearInterval(bindingsSpinner)
@@ -318,26 +411,25 @@ const fixPackageJsonVersion = (packageDir, contractName, network) => {
   }
 }
 
-
 const generateEnvFile = (contracts) => {
-  const envContent = `# Auto-generated by deployment script
-NEXT_PUBLIC_STELLAR_NETWORK=testnet
-NEXT_PUBLIC_RPC_URL=https://soroban-testnet.stellar.org:443
+  const envContent = `# Auto-generated by mainnet deployment script
+NEXT_PUBLIC_STELLAR_NETWORK=mainnet
+NEXT_PUBLIC_RPC_URL=https://mainnet.sorobanrpc.com
 ${Object.entries(contracts).map(([name, info]) => 
   `NEXT_PUBLIC_${name.toUpperCase()}_CONTRACT_ID=${info.contractId}`
 ).join('\n')}
 `
   
-  // Write to root directory
-  fs.writeFileSync('.env.local', envContent)
+  // Write to root directory as .env.mainnet.local
+  fs.writeFileSync('.env.mainnet.local', envContent)
   
   // Also write to frontend directory for Next.js
-  fs.writeFileSync('frontend/.env.local', envContent)
+  fs.writeFileSync('frontend/.env.mainnet.local', envContent)
 }
 
 const generateDeploymentInfo = (contracts) => {
   const deploymentInfo = {
-    network: 'testnet',
+    network: 'mainnet',
     timestamp: new Date().toISOString(),
     contracts: Object.fromEntries(
       Object.entries(contracts).map(([name, info]) => [
@@ -351,7 +443,7 @@ const generateDeploymentInfo = (contracts) => {
   }
   
   fs.writeFileSync(
-    'deployment.json', 
+    'deployment-mainnet.json', 
     JSON.stringify(deploymentInfo, null, 2)
   )
 }
@@ -362,7 +454,7 @@ const main = async () => {
   
   console.log('\n╔════════════════════════════════════════════════════════════════╗')
   console.log('║                                                                ║')
-  console.log('║              🚀 Deploying to Stellar Testnet 🚀                ║')
+  console.log('║              🚀 Deploying to Stellar MAINNET 🚀                ║')
   if (specificContract) {
     console.log(`║                   Contract: ${specificContract.padEnd(33)}║`)
   }
@@ -372,6 +464,15 @@ const main = async () => {
   const startTime = Date.now()
   
   try {
+    // Collect private key
+    const privateKey = await collectPrivateKey()
+    
+    // Confirm deployment
+    const confirmed = await confirmDeployment(specificContract)
+    if (!confirmed) {
+      process.exit(0)
+    }
+    
     step('Step 1: Checking prerequisites')
     await checkPrerequisites()
     
@@ -402,11 +503,11 @@ const main = async () => {
     
     const contracts = {}
     
-    step('Step 4: Deploying contracts')
+    step('Step 4: Deploying contracts to MAINNET')
     const failedContracts = []
     for (const contract of detectedContracts) {
       const wasmPath = `contracts/target/wasm32v1-none/release/${contract.name}.wasm`
-      const result = await deployContract(contract.name, wasmPath)
+      const result = await deployContract(contract.name, wasmPath, privateKey)
       if (result) {
         contracts[contract.name] = result
       } else {
@@ -436,7 +537,7 @@ const main = async () => {
     console.log('║                                                                ║')
     console.log('╚════════════════════════════════════════════════════════════════╝\n')
     
-    console.log(`\x1b[1;32m🎉 Successfully deployed ${Object.keys(contracts).length} contract(s) in ${elapsedTime}s\x1b[0m\n`)
+    console.log(`\x1b[1;32m🎉 Successfully deployed ${Object.keys(contracts).length} contract(s) to MAINNET in ${elapsedTime}s\x1b[0m\n`)
     
     console.log('\x1b[1m📋 Deployed Contracts:\x1b[0m')
     Object.entries(contracts).forEach(([name, info]) => {
@@ -459,6 +560,14 @@ const main = async () => {
       console.log('   4. Start frontend:   \x1b[36myarn dev\x1b[0m\n')
       console.log('\x1b[90m💡 Or run all post-deployment steps: yarn post-deploy\x1b[0m\n')
     }
+    
+    console.log('\x1b[1;33m🌐 Network Configuration:\x1b[0m')
+    console.log('   Mainnet env files created:')
+    console.log('   - .env.mainnet.local')
+    console.log('   - frontend/.env.mainnet.local')
+    console.log('   - deployment-mainnet.json\n')
+    
+    console.log('\x1b[90m💡 To switch networks in frontend, use the network selector in the header\x1b[0m\n')
     
   } catch (err) {
     error(`Deployment failed: ${err.message}`)
@@ -483,3 +592,4 @@ const main = async () => {
 if (require.main === module) {
   main()
 }
+

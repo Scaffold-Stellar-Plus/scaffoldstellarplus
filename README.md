@@ -94,6 +94,16 @@ Built with best practices:
 - **Error Handling**: Clear, actionable error messages
 - **Transaction Feedback**: Real-time status with transaction hashes
 
+### 7. **Multi-Network Support** 🌐
+
+Seamless switching between Stellar networks:
+- **Network Selector**: Switch between Testnet, Mainnet, and Futurenet in the header
+- **Automatic Configuration**: Contract IDs, RPC URLs, and network settings update instantly
+- **Persistent Selection**: Network choice saved in localStorage
+- **Visual Indicators**: Color-coded badges (🟢 Mainnet, 🔵 Testnet, 🟣 Futurenet)
+- **Production-Ready**: Deploy to mainnet with interactive private key collection
+- **Safe Deployment**: Double confirmation required for mainnet deployments
+
 ---
 
 ## 🚀 Quick Start
@@ -270,9 +280,13 @@ The frontend **automatically detects** your new contract and generates UI compon
 | Command | Description |
 |---------|-------------|
 | `yarn setup` | Complete project setup (run once) |
-| `yarn deploy:testnet` | Deploy to Stellar testnet + generate bindings |
+| `yarn deploy:testnet` | Deploy **all** contracts to Stellar testnet + generate bindings |
+| `yarn deploy:testnet <contract>` | Deploy **specific** contract to testnet (e.g., `yarn deploy:testnet hello_world`) |
+| `yarn deploy:mainnet` | Deploy **all** contracts to Stellar **mainnet** (requires private key) ⚠️ |
+| `yarn deploy:mainnet <contract>` | Deploy **specific** contract to mainnet (e.g., `yarn deploy:mainnet hello_world`) ⚠️ |
 | `yarn deploy:futurenet` | Deploy to Stellar futurenet |
 | `yarn deploy:localnet` | Deploy to local Stellar network |
+| `yarn copy:deployments` | Copy deployment files to frontend public directory |
 
 ### Frontend Development
 
@@ -313,6 +327,120 @@ yarn deploy:testnet  # Rebuilds everything and redeploys
 # OR if contracts are already deployed:
 yarn build:packages && yarn post-deploy
 ```
+
+---
+
+## 🚀 Deploying to Mainnet
+
+ScaffoldStellar+ supports secure deployment to Stellar Mainnet with built-in safety features.
+
+### Prerequisites for Mainnet
+
+Before deploying to mainnet, ensure you have:
+
+1. **A funded Stellar account** with sufficient XLM for deployment fees
+2. **Your account's private key** (starts with 'S')
+3. **Tested contracts** on testnet first
+
+⚠️ **Important**: Mainnet deployments use real XLM and cannot be undone. Always test thoroughly on testnet first.
+
+### Deployment Process
+
+1. **Deploy to mainnet**:
+   ```bash
+   yarn deploy:mainnet
+   ```
+
+2. **Enter your private key** when prompted (input is masked):
+   ```
+   🔐 MAINNET DEPLOYMENT - PRIVATE KEY REQUIRED
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   ⚠️  WARNING: You are deploying to Stellar MAINNET!
+   ⚠️  This will use real XLM from your account.
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   
+   Enter your private key: ********
+   ```
+
+3. **Confirm deployment** by typing exactly:
+   ```
+   DEPLOY TO MAINNET
+   ```
+
+4. **Wait for deployment** - the script will:
+   - Build all contracts
+   - Deploy to Stellar mainnet
+   - Generate TypeScript bindings
+   - Create mainnet configuration files
+
+### Generated Mainnet Files
+
+After deployment, you'll have:
+- `.env.mainnet.local` - Mainnet environment variables
+- `deployment-mainnet.json` - Mainnet contract addresses
+- `frontend/public/deployment-mainnet.json` - For network switching
+
+### Network Switching
+
+Switch between networks using the selector in the header:
+
+1. **Testnet** (🔵) - Development and testing
+2. **Mainnet** (🟢) - Production deployment
+3. **Futurenet** (🟣) - Experimental features
+
+The frontend automatically loads the correct contract addresses and RPC endpoints.
+
+### Security Notes
+
+✅ **Safe Practices**:
+- Private key is never logged or stored
+- Input is masked during entry
+- Double confirmation required
+- Script runs entirely locally
+
+⚠️ **Never**:
+- Commit private keys to git
+- Share your private key
+- Use production keys in development
+
+### Complete Deployment Workflow
+
+```bash
+# 1. Test on testnet (all contracts)
+yarn deploy:testnet
+yarn dev  # Test in browser
+
+# 2. Deploy to mainnet (all contracts)
+yarn deploy:mainnet  # Interactive prompts
+
+# 3. Frontend automatically supports both networks
+yarn dev  # Switch networks in header
+```
+
+### Selective Contract Deployment
+
+Deploy only specific contracts instead of all:
+
+```bash
+# Deploy only hello_world to testnet
+yarn deploy:testnet hello_world
+
+# Deploy only increment to mainnet
+yarn deploy:mainnet increment
+
+# Deploy multiple contracts individually
+yarn deploy:testnet hello_world
+yarn deploy:testnet increment
+# All post-deployment steps run automatically!
+```
+
+**Benefits:**
+- ⚡ Faster deployment (only builds/deploys one contract)
+- 🎯 More control over what gets deployed
+- 💰 Lower fees on mainnet (only one contract)
+- 🔄 Update specific contracts without touching others
+
+For detailed deployment documentation, see [DEPLOYMENT.md](./DEPLOYMENT.md).
 
 ---
 
