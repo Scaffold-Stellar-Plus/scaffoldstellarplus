@@ -4,6 +4,7 @@ const { execSync, spawn } = require('child_process')
 const fs = require('fs')
 const path = require('path')
 const readline = require('readline')
+const { analyzeContractConstructor, collectConstructorArgs } = require('./contract-analyzer')
 
 // Clean logging with emojis and colors
 const log = (message) => console.log(`\x1b[36m${message}\x1b[0m`)
@@ -259,7 +260,7 @@ const detectContracts = () => {
   return contracts
 }
 
-const deployContract = async (contractName, wasmPath, privateKey) => {
+const deployContract = async (contractName, wasmPath, privateKey, contractPath) => {
   startSpinner(`Deploying ${contractName} to MAINNET...`)
   
   try {
@@ -282,8 +283,18 @@ const deployContract = async (contractName, wasmPath, privateKey) => {
       return null
     }
     
-    // Deploy contract with mainnet parameters
-    const deployCmd = `stellar contract deploy --wasm-hash ${wasmHash} --source ${privateKey} --rpc-url https://mainnet.sorobanrpc.com --network-passphrase "Public Global Stellar Network ; September 2015" --alias ${contractName}`
+    // Analyze constructor arguments
+    const constructorAnalysis = analyzeContractConstructor(contractPath)
+    let constructorArgs = ''
+    
+    if (constructorAnalysis && constructorAnalysis.hasConstructor) {
+      await stopSpinner() // Stop spinner to allow user interaction
+      constructorArgs = await collectConstructorArgs(contractName, constructorAnalysis.args)
+      startSpinner(`Deploying ${contractName} to MAINNET with constructor arguments...`)
+    }
+    
+    // Deploy contract with mainnet parameters and constructor arguments
+    const deployCmd = `stellar contract deploy --wasm-hash ${wasmHash} --source ${privateKey} --rpc-url https://mainnet.sorobanrpc.com --network-passphrase "Public Global Stellar Network ; September 2015" --alias ${contractName}${constructorArgs ? ' -- ' + constructorArgs : ''}`
     
     const deployOutput = execSync(deployCmd, { encoding: 'utf8', stdio: 'pipe' })
     
@@ -507,7 +518,7 @@ const main = async () => {
     const failedContracts = []
     for (const contract of detectedContracts) {
       const wasmPath = `contracts/target/wasm32v1-none/release/${contract.name}.wasm`
-      const result = await deployContract(contract.name, wasmPath, privateKey)
+      const result = await deployContract(contract.name, wasmPath, privateKey, contract.path)
       if (result) {
         contracts[contract.name] = result
       } else {
