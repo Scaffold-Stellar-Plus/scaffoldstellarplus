@@ -36,6 +36,7 @@ The heart of Scaffold Stellar Plus is its ability to **dynamically analyze and i
 - **Automatic Method Discovery**: Scans TypeScript bindings to extract all contract methods
 - **Smart Classification**: Distinguishes read-only queries from state-changing writes
 - **Parameter Inference**: Automatically determines parameter types and requirements
+- **Constructor Detection**: Auto-detects constructor arguments and prompts interactively during deployment
 - **UI Generation**: Creates interactive forms with validation for every method
 - **Real-time Adaptation**: Updates UI immediately when contracts are deployed
 
@@ -427,6 +428,45 @@ yarn deploy:testnet hello_world
 
 # Deploy only increment to mainnet
 yarn deploy:mainnet increment
+```
+
+### 🔧 Constructor Argument Detection
+
+Scaffold Stellar Plus automatically detects constructor arguments and prompts you interactively during deployment:
+
+**Features:**
+- **Auto-Detection**: Scans Rust source code for `__constructor` functions
+- **Interactive Prompts**: User-friendly prompts with type validation
+- **Smart Validation**: Validates Stellar addresses, integers, strings, etc.
+- **Type-Aware**: Handles Address, String, Symbol, i128, u32, bool, Vec types
+- **CLI Integration**: Automatically formats arguments for Stellar CLI
+
+**Example:**
+```bash
+# Deploying a contract with constructor arguments
+yarn deploy:testnet pool
+
+🔧 Constructor Arguments for pool
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+This contract requires 4 constructor argument(s):
+
+1. token_a (Stellar address (starts with C or G))
+   Enter value for token_a: CCVQ4H65EXQTPONOYK7CTH6JMCAWKJ4RP257FE2MA2UCF2AHVRHGQNTA
+   ✓ Set to: CCVQ4H65EXQTPONOYK7CTH6JMCAWKJ4RP257FE2MA2UCF2AHVRHGQNTA
+
+2. token_b (Stellar address (starts with C or G))
+   Enter value for token_b: CDIJAM6NYMJG5BCATG4TY75GCO4YP4ZYQHTFMH6KH64GEELIM7XH7E4E
+   ✓ Set to: CDIJAM6NYMJG5BCATG4TY75GCO4YP4ZYQHTFMH6KH64GEELIM7XH7E4E
+
+3. lp_token_name (Text string)
+   Enter value for lp_token_name: Cosmo LP Token
+   ✓ Set to: "Cosmo LP Token"
+
+4. lp_token_symbol (Text string)
+   Enter value for lp_token_symbol: COSMO
+   ✓ Set to: COSMO
+
+✅ Constructor arguments collected: --token_a CCVQ4H65EXQTPONOYK7CTH6JMCAWKJ4RP257FE2MA2UCF2AHVRHGQNTA --token_b CDIJAM6NYMJG5BCATG4TY75GCO4YP4ZYQHTFMH6KH64GEELIM7XH7E4E --lp_token_name "Cosmo LP Token" --lp_token_symbol COSMO
 
 # Deploy multiple contracts individually
 yarn deploy:testnet hello_world
