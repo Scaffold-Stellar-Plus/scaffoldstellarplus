@@ -83,9 +83,10 @@ pub struct ${structName};
 
 #[contractimpl]
 impl ${structName} {
-    /// Initialize the contract with an admin address
-    pub fn initialize(env: Env, admin: Address) {
-        env.storage().instance().set(&symbol_short!("admin"), &admin);
+    /// Constructor - called during contract deployment
+    /// This function is automatically detected by the deployment system
+    pub fn __constructor(e: Env, admin: Address) {
+        e.storage().instance().set(&symbol_short!("admin"), &admin);
     }
 
     /// Get the admin address
@@ -95,7 +96,7 @@ impl ${structName} {
             .get(&symbol_short!("admin"))
             .unwrap_or_else(|| panic!("Admin not set"))
     }
-
+    
     /// Example function - replace with your contract logic
     pub fn hello(_env: Env, to: Symbol) -> Symbol {
         // Echo back the input for demonstration
@@ -121,18 +122,18 @@ const testRs = `use soroban_sdk::{symbol_short, testutils::Address as _, Address
 use crate::{${structName}, ${clientName}};
 
 #[test]
-fn test_initialize_and_get_admin() {
+fn test_constructor_and_get_admin() {
     let env = Env::default();
-    let contract_id = env.register(${structName}, ());
-    let client = ${clientName}::new(&env, &contract_id);
     
     // Create a test admin address
     let admin = Address::generate(&env);
 
-    // Initialize the contract with admin
-    client.initialize(&admin);
-
-    // Verify admin was set correctly
+    // Register contract with constructor arguments
+    // In Soroban, constructor arguments are passed directly to env.register()
+    let contract_id = env.register(${structName}, (&admin,));
+    
+    // Create client and verify admin was set correctly
+    let client = ${clientName}::new(&env, &contract_id);
     let retrieved_admin = client.get_admin();
     assert_eq!(admin, retrieved_admin);
 }
@@ -140,7 +141,10 @@ fn test_initialize_and_get_admin() {
 #[test]
 fn test_hello() {
     let env = Env::default();
-    let contract_id = env.register(${structName}, ());
+    let admin = Address::generate(&env);
+    
+    // Register contract with constructor arguments
+    let contract_id = env.register(${structName}, (&admin,));
     let client = ${clientName}::new(&env, &contract_id);
 
     // Test that hello echoes back the input
@@ -157,7 +161,10 @@ fn test_hello() {
 #[test]
 fn test_version() {
     let env = Env::default();
-    let contract_id = env.register(${structName}, ());
+    let admin = Address::generate(&env);
+    
+    // Register contract with constructor arguments
+    let contract_id = env.register(${structName}, (&admin,));
     let client = ${clientName}::new(&env, &contract_id);
 
     let version = client.version();
@@ -165,14 +172,25 @@ fn test_version() {
 }
 
 #[test]
-#[should_panic(expected = "Admin not set")]
-fn test_get_admin_without_initialize() {
+fn test_constructor_works_correctly() {
     let env = Env::default();
-    let contract_id = env.register(${structName}, ());
+    let admin = Address::generate(&env);
+    
+    // Register contract with constructor arguments
+    let contract_id = env.register(${structName}, (&admin,));
     let client = ${clientName}::new(&env, &contract_id);
-
-    // This should panic because initialize was not called
-    client.get_admin();
+    
+    // Verify constructor worked correctly
+    let retrieved_admin = client.get_admin();
+    assert_eq!(admin, retrieved_admin);
+    
+    // Test that the contract functions work
+    let input = symbol_short!("Test");
+    let result = client.hello(&input);
+    assert_eq!(result, input);
+    
+    let version = client.version();
+    assert_eq!(version, 1);
 }
 `;
 
@@ -223,12 +241,17 @@ console.log(`
        ├── lib.rs
        └── test.rs
 
+🔧 Constructor Features:
+   • Contract includes __constructor with admin parameter
+   • Deployment system will auto-detect constructor arguments
+   • Interactive prompts will collect admin address during deployment
+
 🔍 Next steps:
    1. Implement your contract logic in contracts/${contractName}/src/lib.rs
    2. Add tests in contracts/${contractName}/src/test.rs
    3. Run tests: yarn test:contracts
    4. Build: yarn build:contracts
-   5. Deploy: yarn deploy:testnet
+   5. Deploy: yarn deploy:testnet (will prompt for admin address)
 
 📚 Learn more: https://developers.stellar.org/docs/build/smart-contracts
 `);

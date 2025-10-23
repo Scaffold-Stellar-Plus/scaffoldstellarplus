@@ -102,7 +102,7 @@ export default function ContractsPage() {
               </p>
               <div className="bg-gray-800 rounded p-3 text-left">
                 <code className="text-sm text-green-400 font-mono">
-                  yarn deploy:testnet
+                  yarn deploy:"network"
                 </code>
               </div>
             </div>
