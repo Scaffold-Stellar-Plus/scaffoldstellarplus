@@ -18,32 +18,44 @@ const warning = (message) => console.log(`\x1b[33m⚠️  ${message}\x1b[0m`)
 
 /**
  * Parse constructor arguments from Rust source code
+ * Handles both single-line and multi-line constructor definitions
  */
 const parseConstructorArgs = (sourceCode) => {
-  const constructorRegex = /pub\s+fn\s+__constructor\s*\(\s*[^)]*\)\s*\{/g
-  const match = constructorRegex.exec(sourceCode)
+  // Find the __constructor function start
+  const constructorMatch = sourceCode.match(/pub\s+fn\s+__constructor\s*\(/i)
   
-  if (!match) {
+  if (!constructorMatch) {
     return null
   }
   
-  // Extract the full constructor function signature
-  const constructorStart = match.index
-  const constructorEnd = sourceCode.indexOf('{', constructorStart)
-  const constructorSignature = sourceCode.substring(constructorStart, constructorEnd)
+  // Find the opening parenthesis position
+  const openParenPos = constructorMatch.index + constructorMatch[0].lastIndexOf('(')
   
-  // Parse parameters
-  const paramsRegex = /__constructor\s*\(\s*[^)]*\)/
-  const paramsMatch = paramsRegex.exec(constructorSignature)
+  // Find the matching closing parenthesis using bracket matching
+  // We need to find the ')' that closes the parameter list before the '{'
+  let parenCount = 0
+  let closingParenPos = -1
+  let openingBracePos = sourceCode.indexOf('{', openParenPos)
   
-  if (!paramsMatch) {
+  // Start from the opening parenthesis and search until we find the matching ')'
+  for (let i = openParenPos; i < openingBracePos && i < sourceCode.length; i++) {
+    if (sourceCode[i] === '(') {
+      parenCount++
+    } else if (sourceCode[i] === ')') {
+      parenCount--
+      if (parenCount === 0) {
+        closingParenPos = i
+        break
+      }
+    }
+  }
+  
+  if (closingParenPos === -1) {
     return null
   }
   
-  const paramsString = paramsMatch[0]
-    .replace('__constructor', '')
-    .replace(/[()]/g, '')
-    .trim()
+  // Extract the parameter string between parentheses (excluding the parentheses themselves)
+  const paramsString = sourceCode.substring(openParenPos + 1, closingParenPos).trim()
   
   if (!paramsString) {
     return []
@@ -51,16 +63,47 @@ const parseConstructorArgs = (sourceCode) => {
   
   // Parse individual parameters
   const args = []
-  const paramLines = paramsString.split(',').map(p => p.trim()).filter(p => p)
   
-  for (const param of paramLines) {
+  // We'll use a simple approach: split by comma and handle multi-line parameters
+  const paramParts = []
+  let currentParam = ''
+  let angleBracketDepth = 0
+  
+  for (let i = 0; i < paramsString.length; i++) {
+    const char = paramsString[i]
+    
+    if (char === '<') {
+      angleBracketDepth++
+      currentParam += char
+    } else if (char === '>') {
+      angleBracketDepth--
+      currentParam += char
+    } else if (char === ',' && angleBracketDepth === 0) {
+      // This comma is at the top level, so it separates parameters
+      if (currentParam.trim()) {
+        paramParts.push(currentParam.trim())
+      }
+      currentParam = ''
+    } else {
+      currentParam += char
+    }
+  }
+  
+  // Add the last parameter
+  if (currentParam.trim()) {
+    paramParts.push(currentParam.trim())
+  }
+  
+  // Process each parameter
+  for (const param of paramParts) {
     // Skip 'e: Env' parameter (environment)
     if (param.includes('e: Env') || param.includes('env: Env')) {
       continue
     }
     
     // Extract parameter name and type
-    const paramMatch = param.match(/(\w+):\s*([^,]+)/)
+    // Format: name: Type or name: Type, with possible whitespace
+    const paramMatch = param.match(/(\w+):\s*(.+)/)
     if (paramMatch) {
       const [, name, type] = paramMatch
       args.push({
@@ -170,25 +213,56 @@ const formatForCLI = (value, type) => {
 
 /**
  * Analyze contract for constructor arguments
+ * Searches all .rs files in the src/ directory to handle modular code structures
  */
 const analyzeContract = (contractPath) => {
-  const libPath = path.join(contractPath, 'src', 'lib.rs')
+  const srcPath = path.join(contractPath, 'src')
   
-  if (!fs.existsSync(libPath)) {
+  if (!fs.existsSync(srcPath)) {
     return null
   }
   
-  try {
-    const sourceCode = fs.readFileSync(libPath, 'utf8')
-    const constructorArgs = parseConstructorArgs(sourceCode)
-    
-    return {
-      hasConstructor: constructorArgs !== null,
-      args: constructorArgs || []
-    }
-  } catch (err) {
-    error(`Failed to analyze contract at ${libPath}: ${err.message}`)
+  // Get all .rs files in the src directory
+  const files = fs.readdirSync(srcPath).filter(file => file.endsWith('.rs'))
+  
+  if (files.length === 0) {
     return null
+  }
+  
+  // Sort files to check lib.rs first (common location), then others
+  files.sort((a, b) => {
+    if (a === 'lib.rs') return -1
+    if (b === 'lib.rs') return 1
+    return a.localeCompare(b)
+  })
+  
+  // Search through all .rs files to find the constructor
+  for (const file of files) {
+    const filePath = path.join(srcPath, file)
+    
+    try {
+      const sourceCode = fs.readFileSync(filePath, 'utf8')
+      const constructorArgs = parseConstructorArgs(sourceCode)
+      
+      // If constructor found in this file, return it
+      if (constructorArgs !== null) {
+        return {
+          hasConstructor: true,
+          args: constructorArgs,
+          foundIn: file
+        }
+      }
+    } catch (err) {
+      // Continue to next file if this one fails
+      warning(`Failed to read ${filePath}: ${err.message}`)
+      continue
+    }
+  }
+  
+  // No constructor found in any file
+  return {
+    hasConstructor: false,
+    args: []
   }
 }
 
